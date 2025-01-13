@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Form Designer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="FormDesigner">
+        <ws-rectangle id="box1" top="150px" left="30px" width="300px" height="40px" color="blue"></ws-rectangle>
+        <ws-rectangle id="box2" top="250px" left="30px" width="300px" height="40px" color="green"></ws-rectangle>
+        <ws-rectangle id="box3" top="350px" left="30px" width="300px" height="40px"></ws-rectangle>
+        
+        <ws-label id="box4" top="250px" left="500" width="200" color="white">
+            <slot name="caption">My Custom Prompt</slot>
+        </ws-label>
+
+        <ws-combobox id="box4" top="150px" left="500" width="200" color="white"></ws-combobox>
+        
+    </div>
+    
+    <script src="./script.js"></script>
+    <script src="./WSElements.js"></script>
+</body>
+</html>
