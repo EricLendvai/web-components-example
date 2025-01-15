@@ -12,11 +12,17 @@
         <ws-rectangle id="box2" top="250px" left="30px" width="300px" height="40px" color="green"></ws-rectangle>
         <ws-rectangle id="box3" top="350px" left="30px" width="300px" height="40px"></ws-rectangle>
         
-        <ws-label id="box4" top="250px" left="500" width="200" color="white">
+        <ws-label id="box4" top="250px" left="500" width="200" color="none">
             <slot name="caption">My Custom Prompt</slot>
         </ws-label>
 
-        <ws-combobox id="box4" top="150px" left="500" width="200" color="white"></ws-combobox>
+        <ws-combobox id="box4" top="150px" left="500" width="200" height="30">
+            <ul>
+                <li data-value="1">Red</li>
+                <li data-value="2">Green</li>
+                <li data-value="3">Blue</li>
+            </ul>
+        </ws-combobox>
         
     </div>
     

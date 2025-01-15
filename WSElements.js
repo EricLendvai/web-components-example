@@ -1,45 +1,16 @@
 
+// Todo
+// ====
+// Have a way to select a object and have its border a different color.
+// On Object selection display its information out, dispatch and event to parent container.
+// On Combobox have the value available for post submit
+//      https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals/setFormValue
+
 //-------------------------------------------------------------------------------------------------------------------------------------------
-const templateWSRectangleElement = document.createElement('template');
-templateWSRectangleElement.innerHTML = `
-    <style>
-        :host {
-            display: block;
-            background-color: #333;   /* Default background */
-            position: absolute;min-width:100px;min-height:20px;border:1px solid black;
-            border: 1px solid black;
-        }
-
-        .WSResizer       {position: absolute; /* border: 1px solid #1264df; */}
-        .WSResizerSide   {z-index: 11;}
-        .WSResizerCorner {z-index: 12;}
-
-        .WSResizerSideTop           {top:-4px;left:0px;width:100%;height:8px;cursor:row-resize;}
-        .WSResizerSideBottom        {bottom:-4px;left:0px;width:100%;height:8px;cursor:row-resize;}
-        .WSResizerSideLeft          {top:0px;left:-4px;width:8px;height:100%;cursor:col-resize;}
-        .WSResizerSideRight         {top:0px;right:-4px;width:8px;height:100%;cursor:col-resize;}
-
-        .WSResizerCornerTopLeft     {top:-4px;left:-4px;width:12px;height:12px;cursor:nwse-resize;}
-        .WSResizerCornerTopRight    {top:-4px;right:-4px;width:12px;height:12px;cursor:nesw-resize;}
-        .WSResizerCornerBottomLeft  {bottom:-4px;left:-4px;width:12px;height:12px;cursor:nesw-resize;}
-        .WSResizerCornerBottomRight {bottom:-4px;right:-4px;width:12px;height:12px;cursor:nwse-resize;}
-    </style>
-    
-    <div class="WSResizer WSResizerSide WSResizerSideTop WSResizerTop"></div>
-    <div class="WSResizer WSResizerSide WSResizerSideBottom WSResizerBottom"></div>
-    <div class="WSResizer WSResizerSide WSResizerSideLeft WSResizerLeft"></div>
-    <div class="WSResizer WSResizerSide WSResizerSideRight WSResizerRight"></div>
-    <div class="WSResizer WSResizerCorner WSResizerCornerTopLeft WSResizerTop WSResizerLeft"></div>
-    <div class="WSResizer WSResizerCorner WSResizerCornerTopRight WSResizerTop WSResizerRight"></div>
-    <div class="WSResizer WSResizerCorner WSResizerCornerBottomLeft WSResizerBottom WSResizerLeft"></div>
-    <div class="WSResizer WSResizerCorner WSResizerCornerBottomRight WSResizerBottom WSResizerRight"></div>
-`;
-
 class WSBaseElement extends HTMLElement {
-
     static lastZIndex = 0;
 
-    formElement;
+    componentWrapper;  //Needed to allow to bind web component events, since the shadow DOM root can not be used.
 
     #elementResizeId = null;
     #elementResizeStyle = null;
@@ -56,26 +27,67 @@ class WSBaseElement extends HTMLElement {
     #elementResizerMinWidth;
     #elementResizerMinHeight;
 
+    //------------------------------------------------------------------------------------------------
+    getComponentStyle() {return `
+:host {
+    display: block;
+    background-color: #333;   /* Default background */
+    position: absolute;min-width:100px;min-height:20px;border:1px solid black;
+    border: 1px solid black;
+}
+
+.WSResizer       {position: absolute; /* border: 1px solid #1264df; */}
+.WSResizerSide   {z-index: 11;}
+.WSResizerCorner {z-index: 12;}
+
+.WSResizerSideTop           {top:-4px;left:0px;width:100%;height:8px;cursor:row-resize;}
+.WSResizerSideBottom        {bottom:-4px;left:0px;width:100%;height:8px;cursor:row-resize;}
+.WSResizerSideLeft          {top:0px;left:-4px;width:8px;height:100%;cursor:col-resize;}
+.WSResizerSideRight         {top:0px;right:-4px;width:8px;height:100%;cursor:col-resize;}
+
+.WSResizerCornerTopLeft     {top:-4px;left:-4px;width:12px;height:12px;cursor:nwse-resize;}
+.WSResizerCornerTopRight    {top:-4px;right:-4px;width:12px;height:12px;cursor:nesw-resize;}
+.WSResizerCornerBottomLeft  {bottom:-4px;left:-4px;width:12px;height:12px;cursor:nesw-resize;}
+.WSResizerCornerBottomRight {bottom:-4px;right:-4px;width:12px;height:12px;cursor:nwse-resize;}
+    `};
+    //------------------------------------------------------------------------------------------------
+    getComponentContent() { return `
+<div class="WSResizer WSResizerSide WSResizerSideTop WSResizerTop"></div>
+<div class="WSResizer WSResizerSide WSResizerSideBottom WSResizerBottom"></div>
+<div class="WSResizer WSResizerSide WSResizerSideLeft WSResizerLeft"></div>
+<div class="WSResizer WSResizerSide WSResizerSideRight WSResizerRight"></div>
+<div class="WSResizer WSResizerCorner WSResizerCornerTopLeft WSResizerTop WSResizerLeft"></div>
+<div class="WSResizer WSResizerCorner WSResizerCornerTopRight WSResizerTop WSResizerRight"></div>
+<div class="WSResizer WSResizerCorner WSResizerCornerBottomLeft WSResizerBottom WSResizerLeft"></div>
+<div class="WSResizer WSResizerCorner WSResizerCornerBottomRight WSResizerBottom WSResizerRight"></div>
+    `;
+    }
+    //------------------------------------------------------------------------------------------------
     constructor() {
         super();
+
+        // shadowRoot shields the web component from external styling, mostly
         // this.root = this.attachShadow({ mode: 'open',delegatesFocus:true });  //closed
         this.root = this.attachShadow({ mode: 'closed'});  // Had to use a nested div addEventListener to instead of showdom
 
-        const nestedDiv = document.createElement('div');
-        nestedDiv.id = "WSFormElement";
-        nestedDiv.style.position = "absolute";
-        nestedDiv.style.top = 0;
-        nestedDiv.style.left = 0;
-        nestedDiv.style.width = "100%";
-        nestedDiv.style.height = "100%";
-        nestedDiv.style.border = "1px solid black";
+        const componentStyle = document.createElement('style');
+        componentStyle.innerHTML = this.getComponentStyle();
+        this.root.append(componentStyle);
 
-        this.root.append(nestedDiv);
-        this.formElement = nestedDiv;
+        const componentWrapper = document.createElement('div');
+        componentWrapper.id = "WScomponentWrapper";
+        componentWrapper.classList.add("WSMover");
+        componentWrapper.style.position = "absolute";
+        componentWrapper.style.top = 0;
+        componentWrapper.style.left = 0;
+        componentWrapper.style.width = "100%";
+        componentWrapper.style.height = "100%";
+        componentWrapper.style.border = "1px solid black";
 
-        // shadowRoot shields the web component from external styling, mostly
-        let clone = templateWSRectangleElement.content.cloneNode(true);
-        nestedDiv.append(clone);
+        componentWrapper.innerHTML = this.getComponentContent();
+
+        this.root.append(componentWrapper);
+        this.componentWrapper = componentWrapper;
 
         // Initialize mouse-related variables
         this.isMouseDown = false;   // To handle ensure we only deal with the move and up from the component we started dragging and resizing.
@@ -86,29 +98,30 @@ class WSBaseElement extends HTMLElement {
         this.handleMouseUp     = this.handleMouseUp.bind(this);
         this.handleMouseMove   = this.handleMouseMove.bind(this);
     }
-
+    //------------------------------------------------------------------------------------------------
     //Web Components added or removed from page
     connectedCallback() {  // Added component to page
-        this.formElement.addEventListener('dblclick',  this.handleDoubleClick);  // Since we are set at "closed", had to addEvent to the nested DIV.
-        this.formElement.addEventListener('mousedown', this.handleMouseDown);    // Since we are set at "closed", had to addEvent to the nested DIV.
+        this.componentWrapper.addEventListener('dblclick',  this.handleDoubleClick);  // Since we are set at "closed", had to addEvent to the nested DIV.
+        this.componentWrapper.addEventListener('mousedown', this.handleMouseDown);    // Since we are set at "closed", had to addEvent to the nested DIV.
         document.addEventListener('mouseup',   this.handleMouseUp);              // Had to attach to document since the mouse will move outside the web component.
         document.addEventListener('mousemove', this.handleMouseMove);            // Had to attach to document since the mouse will move outside the web component.
     }
-
+    //------------------------------------------------------------------------------------------------
     disconnectedCallback() {  // Removed component from page
         // Clean up event listeners when the component is removed from the DOM
-        this.formElement.removeEventListener('dblclick' , this.handleDoubleClick);
-        this.formElement.removeEventListener('mousedown', this.handleMouseDown);
+        this.componentWrapper.removeEventListener('dblclick' , this.handleDoubleClick);
+        this.componentWrapper.removeEventListener('mousedown', this.handleMouseDown);
         document.removeEventListener('mouseup',   this.handleMouseUp);
         document.removeEventListener('mousemove', this.handleMouseMove);
     }
-
+    //------------------------------------------------------------------------------------------------
     handleDoubleClick(Event) {
         WSRectangleElement.lastZIndex++;
         // console.log("DoubleClick",WSRectangleElement.lastZIndex);
         this.style.zIndex = WSRectangleElement.lastZIndex;
     }
-
+    //------------------------------------------------------------------------------------------------
+    // Mouse down handler
     handleMouseDown(Event) {
         this.isMouseDown = true;
         // console.log('Mouse down at', Event.clientX, Event.clientY,Event.target.id,Event.target.classList);
@@ -128,7 +141,9 @@ class WSBaseElement extends HTMLElement {
             this.#elementResizerMinWidth  = parseInt(elementStyle.getPropertyValue('min-width'),10);
             this.#elementResizerMinHeight = parseInt(elementStyle.getPropertyValue('min-height'),10);
 
-        } else if (Event.target.id === "WSFormElement") {   //Clicked on the root container
+        // } else if (Event.target.id === "WScomponentWrapper") {   //Clicked on the root container
+        } else if (classList.contains("WSMover")) {   //Clicked on the root container
+        
             this.#elementDragId = this.id;  //Event.target.id;
             this.#elementDragStyle = this.style;
             this.#elementDragOffsetX = Event.clientX - this.offsetLeft;
@@ -137,11 +152,10 @@ class WSBaseElement extends HTMLElement {
         }
 
     }
-
+    //------------------------------------------------------------------------------------------------
     // Mouse up handler
     handleMouseUp(Event) {
         this.isMouseDown = false;
-        // console.log('Mouse up at', Event.clientX, Event.clientY);
 
         this.#elementResizeId = null;
         this.#elementResizeStyle = null;
@@ -149,14 +163,14 @@ class WSBaseElement extends HTMLElement {
         this.#elementDragId = null;
         this.#elementDragStyle = null;
     }
-
+    //------------------------------------------------------------------------------------------------
     NormalizeForPx(xValue) {
         if (typeof xValue === "number") {return xValue+"px";} 
         else if (xValue.toLowerCase().includes('px')) {return xValue;}
         else if (xValue.toLowerCase().includes('%')) {return xValue;}
         else {return xValue+"px";}
     }
-
+    //------------------------------------------------------------------------------------------------
     // Mouse move handler
     handleMouseMove(Event) {
         if (this.isMouseDown) {
@@ -249,7 +263,7 @@ class WSBaseElement extends HTMLElement {
 
         }
     }
-
+    //------------------------------------------------------------------------------------------------
     // Attributes and Properties...
     static get observedAttributes() {return ['top','left','width','height','color'];}
 
@@ -275,13 +289,18 @@ class WSBaseElement extends HTMLElement {
         else if (attributeName.toLowerCase() === 'left')   {this.style.left = this.NormalizeForPx(newVal);}
         else if (attributeName.toLowerCase() === 'width')  {this.style.width = this.NormalizeForPx(newVal);}
         else if (attributeName.toLowerCase() === 'height') {this.style.height = this.NormalizeForPx(newVal);}
-        else if (attributeName.toLowerCase() === 'color')  {this.style.backgroundColor = newVal;}
+        else if (attributeName.toLowerCase() === 'color')  { if (newVal.toLowerCase() === 'none') {
+                                                                    this.style.backgroundColor = 'transparent';
+                                                                } else {
+                                                                    this.style.backgroundColor = newVal;
+                                                                }
+                                                           }
     }
-
-    AddToFormElement(content) {
-        this.formElement.append(content);
+    //------------------------------------------------------------------------------------------------
+    AddTocomponentWrapper(content) {
+        this.componentWrapper.append(content);
     }
-
+    //------------------------------------------------------------------------------------------------
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -289,7 +308,12 @@ class WSRectangleElement extends WSBaseElement {
 
     constructor() {
         super();
-        //For now the Rectangle is the Base Element
+
+        const extraStyle = document.createElement('style');
+        extraStyle.innerText = `
+            #WScomponentWrapper {cursor: move;}
+        `;
+        this.root.append(extraStyle);
     }
 
 }
@@ -299,9 +323,24 @@ class WSLabelElement extends WSBaseElement {
 
     constructor() {
         super();
+
         const content = document.createElement('span');
-        content.innerHTML = '<slot name="caption"><slot>'
-        this.AddToFormElement(content);
+        content.style.userSelect = 'none';
+        content.innerHTML = '<slot name="caption"><slot>'  //Will add a location where the slot specified in the light DOM will be used.
+        this.AddTocomponentWrapper(content);
+
+        this.componentWrapper.classList.remove("WSMover");
+
+        const moverDiv = document.createElement('div');
+        moverDiv.classList.add('WSMover'); 
+        this.AddTocomponentWrapper(moverDiv);
+
+        const extraStyle = document.createElement('style');
+        extraStyle.innerText = `
+            .WSMover {position:absolute;top:0;left:0;width:100%;height:100%;cursor:move;z-index:10;}
+        `;
+        this.root.append(extraStyle);
+
     }
 
 }
@@ -312,25 +351,42 @@ class WSComboBoxElement extends WSBaseElement {
 
     constructor() {
         super();
+
+        this.componentWrapper.classList.remove("WSMover");
+
         const content = document.createElement('select');
-        this.AddToFormElement(content);
+        this.AddTocomponentWrapper(content);
+
+        const moverDiv = document.createElement('div');
+        // moverDiv.id = 'mover';
+        moverDiv.classList.add('WSMover'); 
+        this.AddTocomponentWrapper(moverDiv);
+
+        const extraStyle = document.createElement('style');
+        extraStyle.innerText = `
+            div.WSResizerCorner,div.WSResizerSideTop,div.WSResizerSideBottom {display: none;}
+            .WSMover {position:absolute;top:0;left:0;width:100%;height:50%;cursor:move;z-index:10;}
+        `;
+        this.root.append(extraStyle);
+
     }
 
     connectedCallback() {  // Added component to page
         super.connectedCallback();
-        let selectElement = this.formElement.querySelector('select');
-        let newOption;
 
-        newOption = document.createElement('option');
-        newOption.value = 'strawberry';
-        newOption.textContent = 'Strawberry';
-        selectElement.appendChild(newOption);
+        //Build a <select> by adding <options> from the list of <li> in Web Component innerHtml
+        let selectElement = this.componentWrapper.querySelector('select');
+        selectElement.style.width = 'calc(100% - 1px)';
+        selectElement.style.height = 'calc(100% - 1px)';
 
-        newOption = document.createElement('option');
-        newOption.value = 'banana';
-        newOption.textContent = 'Banana';
-        selectElement.appendChild(newOption);
-       
+        const elements = this.getElementsByTagName('li');  // Will the the elements inside the web component, not its Shadow DOM. Those elements are not rendered unless used via the "slot" mechanics
+        for (const element of elements) {
+            const newOption = document.createElement('option');
+            newOption.value = element.dataset.value;
+            newOption.textContent = element.innerText;
+            selectElement.appendChild(newOption);
+        }
+
     }
 
 }
